@@ -447,10 +447,10 @@ with st.sidebar:
     st.markdown("""
     <div style="padding:12px 0;">
         <p style="font-size:0.75rem; opacity:0.6; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Membres</p>
-        <p style="font-size:0.85rem; margin:3px 0;">👤 LIENOU</p>
-        <p style="font-size:0.85rem; margin:3px 0;">👤 FEZE</p>
-        <p style="font-size:0.85rem; margin:3px 0;">👤 EYOUM</p>
-        <p style="font-size:0.85rem; margin:3px 0;">👤 FOUDA</p>
+        <p style="font-size:0.85rem; margin:3px 0;">👤 FEZE Loick</p>
+        <p style="font-size:0.85rem; margin:3px 0;">👤 LIENOU Wilfried</p>
+        <p style="font-size:0.85rem; margin:3px 0;">👤 EYOUM Jack-Brayan</p>
+        <p style="font-size:0.85rem; margin:3px 0;">👤 FOUDA Ornella</p>
     </div>
     """, unsafe_allow_html=True)
 
