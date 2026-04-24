@@ -1,8 +1,8 @@
-googletrans==4.0.2
-gTTS==2.5.4
-huggingface_hub==1.3.5
-numpy==2.4.4
-Pillow==12.2.0
-streamlit==1.52.1
-tensorflow==2.20.0
-yfinance==1.1.0
+streamlit
+tensorflow-cpu
+numpy
+Pillow
+googletrans==4.0.0-rc1
+gTTS
+huggingface_hub
+python-dotenv
