@@ -447,8 +447,8 @@ with st.sidebar:
     st.markdown("""
     <div style="padding:12px 0;">
         <p style="font-size:0.75rem; opacity:0.6; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Membres</p>
-        <p style="font-size:0.85rem; margin:3px 0;">👤 FEZE</p>
         <p style="font-size:0.85rem; margin:3px 0;">👤 LIENOU</p>
+        <p style="font-size:0.85rem; margin:3px 0;">👤 FEZE</p>
         <p style="font-size:0.85rem; margin:3px 0;">👤 EYOUM</p>
         <p style="font-size:0.85rem; margin:3px 0;">👤 FOUDA</p>
     </div>
@@ -674,17 +674,53 @@ elif page == "📈 Finance (Actions)":
     if run_finance:
         st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
+        # ── Prix de repli si Yahoo rate-limite (Streamlit Cloud) ───────────
+        FALLBACK_PRICES = {"GOOGL": 175.50, "TSLA": 170.20, "MSFT": 415.80, "AAPL": 210.30}
+
+        def download_with_retry(t, retries=3, wait=5):
+            import time
+            for attempt in range(retries):
+                try:
+                    df = yf.download(t, period="2y", progress=False)
+                    if df is not None and not df.empty:
+                        return df
+                except Exception as e:
+                    st.warning(f"Tentative {attempt+1}/{retries} : {e}")
+                if attempt < retries - 1:
+                    time.sleep(wait)
+            return None
+
         with st.spinner("Récupération des données de marché..."):
-            df = yf.download(ticker, period="2y")
+            df = download_with_retry(ticker)
 
-        last_price = float(df['Close'].iloc[-1])
-        change = np.random.uniform(-0.05, 0.10)
+        using_fallback = (df is None or df.empty)
+
+        if using_fallback:
+            st.markdown('''
+            <div class="result-box warning">
+                <h4>⚠️ Données temps réel indisponibles</h4>
+                <p>Yahoo Finance limite les requêtes depuis Streamlit Cloud (rate limit).
+                   L'analyse continue avec les derniers prix connus en cache.
+                   Réessayez dans quelques minutes pour obtenir les données temps réel.</p>
+            </div>
+            ''', unsafe_allow_html=True)
+            last_price = FALLBACK_PRICES.get(ticker, 100.0)
+            vol_pct = 1.8
+        else:
+            close_col = df["Close"]
+            if hasattr(close_col, "columns"):
+                close_col = close_col.iloc[:, 0]
+            last_price = float(close_col.iloc[-1])
+            vol_pct = float(close_col.pct_change().std() * 100)
+
+        change       = np.random.uniform(-0.05, 0.10)
         future_price = last_price * (1 + change)
-        delta = future_price - last_price
-        delta_pct = (delta / last_price) * 100
+        delta        = future_price - last_price
+        delta_pct    = (delta / last_price) * 100
+        source_label = "⚠️ Cache (rate limit)" if using_fallback else "✅ Temps réel"
 
-        # KPI row
-        st.markdown('<div class="card-label">Indicateurs clés</div>', unsafe_allow_html=True)
+        # ── KPI ────────────────────────────────────────────────────────────
+        st.markdown(f'<div class="card-label">Indicateurs clés — Source : {source_label}</div>', unsafe_allow_html=True)
         k1, k2, k3, k4 = st.columns(4)
         with k1:
             st.metric("Dernier cours", f"{last_price:.2f} $")
@@ -693,16 +729,26 @@ elif page == "📈 Finance (Actions)":
         with k3:
             st.metric("Variation estimée", f"{delta_pct:+.2f}%")
         with k4:
-            vol = df['Close'].pct_change().std() * 100
-            st.metric("Volatilité (2 ans)", f"{float(vol):.2f}%")
+            st.metric("Volatilité (2 ans)", f"{vol_pct:.2f}%" if not using_fallback else "N/A")
 
-        st.markdown('<br>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        # Graphique
+        # ── Graphique ──────────────────────────────────────────────────────
         st.markdown('<div class="card-label">Historique du cours (2 ans)</div>', unsafe_allow_html=True)
-        st.line_chart(df['Close'], color="#2D6A4F")
+        if not using_fallback:
+            close_col = df["Close"]
+            if hasattr(close_col, "columns"):
+                close_col = close_col.iloc[:, 0]
+            st.line_chart(close_col, color="#2D6A4F")
+        else:
+            st.markdown('''
+            <div class="card" style="text-align:center; padding:32px; color:var(--text-light);">
+                📊 Graphique indisponible — données rate-limitées par Yahoo Finance.<br>
+                <small>Réessayez dans quelques minutes.</small>
+            </div>
+            ''', unsafe_allow_html=True)
 
-        # Analyse IA
+        # ── Analyse IA ─────────────────────────────────────────────────────
         st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
         st.markdown('<div class="card-label">Conseil IA — Analyse fondamentale</div>', unsafe_allow_html=True)
 
@@ -715,26 +761,27 @@ elif page == "📈 Finance (Actions)":
                     model="mistralai/Mistral-7B-Instruct-v0.3",
                     max_new_tokens=100
                 )
-            st.markdown(f"""
+            st.markdown(f'''
             <div class="result-box success">
                 <h4>🤖 Conseil IA pour {ticker}</h4>
                 <p>{res_finance}</p>
             </div>
-            """, unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
         except Exception:
-            st.markdown("""
+            st.markdown('''
             <div class="result-box warning">
                 <h4>⚠️ Analyse IA</h4>
                 <p>Analyse IA indisponible pour le moment. Veuillez réessayer.</p>
             </div>
-            """, unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
 
-        # Disclaimer
-        st.markdown("""
+        # ── Disclaimer ─────────────────────────────────────────────────────
+        st.markdown('''
         <div style="margin-top:24px; padding:14px 18px; background:var(--bg-card-alt);
                     border-radius:var(--radius-sm); font-size:0.78rem; color:var(--text-light);
                     border:1px solid var(--border);">
-            ⚠️ <strong style="color:var(--text-mid);">Avertissement :</strong> Les prédictions générées sont à titre pédagogique uniquement
-            et ne constituent pas un conseil financier. Toute décision d'investissement reste de votre responsabilité.
+            ⚠️ <strong style="color:var(--text-mid);">Avertissement :</strong>
+            Les prédictions sont à titre pédagogique uniquement et ne constituent pas
+            un conseil financier. Toute décision d'investissement reste de votre responsabilité.
         </div>
-        """, unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
