@@ -10,11 +10,21 @@ from huggingface_hub import InferenceClient
 from dotenv import load_dotenv
 
 # --- CONFIGURATION DES CLÉS (Groupe 1) ---
-load_dotenv()
-HF_TOKEN = os.getenv("HF_TOKEN")
+# --- RÉCUPÉRATION SÉCURISÉE DES CLÉS ---
+# Si on est sur Streamlit Cloud
+if "HF_TOKEN" in st.secrets:
+    HF_TOKEN = st.secrets["HF_TOKEN"]
+    LANGCHAIN_API_KEY = st.secrets["LANGCHAIN_API_KEY"]
+# Si on est en local (PC)
+else:
+    from dotenv import load_dotenv
+    load_dotenv()
+    HF_TOKEN = os.getenv("HF_TOKEN")
+    LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
 
+# Configuration des variables d'environnement pour LangSmith
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
 
 st.set_page_config(
     page_title="IA Dashboard — Groupe 1",
